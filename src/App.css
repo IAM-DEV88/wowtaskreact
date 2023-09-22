@@ -1,0 +1,238 @@
+#root{
+    padding: 1rem;
+  }
+  
+  .tab-content{
+    padding: .5rem;
+    border-left:solid 1px #ccc;
+    border-right:solid 1px #ccc;
+    border-bottom:solid 1px #ccc;
+  }
+  
+  /* COMPONENTE CHARLIST */
+  .character-card{
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: .5rem;
+  }
+
+  .character-info{
+    width: 40%;
+  }
+  
+  .character-info {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: .5rem;
+  }
+
+  .character-info>div{
+    padding: .5rem;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+
+  .character-info>div:hover{
+    background: rgba(0, 0, 0, .1);
+    border-radius: 5px;
+  }
+  
+  .pending-task, .completed-task{
+    width: 30%;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-width: 170px;
+  }
+  
+  .pending-task>div, .completed-task>div{
+    display: flex;
+    align-items: center;
+    padding: .5rem;
+    cursor: pointer;
+  }
+
+  .pending-task>div label, .completed-task>div label{
+    flex-grow: 1;
+  }
+
+  .pending-task>div:hover, .completed-task>div:hover{
+    background: rgba(0, 0, 0, .1);
+    border-radius: 5px;
+  }
+
+  .pending-task label, .completed-task label{
+    padding-left: .5rem;
+    cursor: pointer;
+  }
+  
+  .pending-task input, .completed-task input{
+    cursor: pointer;
+    height: 20px;
+    width: 20px;
+  }
+/* FIN COMPONENTE CHARLIST */
+
+/* COMPONENTE TASK LIST */
+.task-item{
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: .5rem;
+}
+
+.task-info{
+  width: 40%;
+}
+
+.task-info {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: .5rem;
+}
+
+.task-info>div{
+  padding: .5rem;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.task-info>div:hover{
+  background: rgba(0, 0, 0, .1);
+  border-radius: 5px;
+}
+
+
+.task-exclude{
+  padding: .5rem;
+  flex-grow: 1;
+}
+
+.exclude-list{
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: .5rem;
+}
+
+.exclude-list>div{
+  padding: .3rem;
+  display: flex;
+  align-items: center;
+}
+
+.exclude-list input{
+  height: 20px;
+  width: 20px;
+  margin-right: .5rem;
+  cursor: pointer;
+}
+
+.exclude-list label{
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.exclude-list>div:hover, .task-attribute:hover{
+  background: rgba(0, 0, 0, .1);
+  border-radius: 5px;
+}
+/* FIN COMPONENTE TASK LIST */
+
+
+
+
+  .toolbarBtn{
+    margin: 0 .5rem;
+  }
+  
+  .attrInput{
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+  }
+  
+  .modal-footer{
+    justify-content: space-around !important;
+  }
+  
+  .charSelect{
+    padding: .5rem;
+    width: 70%;
+  
+  }
+  
+  .select-bar{
+    display: flex;
+    margin-bottom: .5rem;
+  }
+
+  .tabla-tareas {
+    margin: 0;
+    width: 100%;
+    border: none;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  .tabla-tareas tr:nth-child(even) {
+    background:rgba(0, 0, 0, .1);
+  }
+
+  .char-cell label:hover, .char-cell div:hover{
+    background: rgba(0, 0, 0, .1);
+    border-radius: 5px;
+  }
+  .char-cell label, .char-cell div{
+    padding: 0 .3rem;
+    cursor: pointer;
+  }
+  .char-cell input{
+    cursor: pointer;
+    height: 20px;
+    width: 100%;
+    margin-top: .3rem;
+  }
+
+  .task-cell{
+    text-align: left;
+    display: flex;
+    align-items: center;
+    padding: .3rem 0;
+  }
+  .task-cell:hover{
+    background: rgba(0, 0, 0, .1);
+    border-radius: 5px;
+  }
+  .task-cell label{
+    cursor: pointer;
+    flex-grow: 1;
+  }
+  .task-cell input{
+    cursor: pointer;
+    height: 20px;
+    width: 20px;
+    margin: 0 .5rem;
+  }
+
+  /* Estilos para los checkboxes */
+  .check {
+    padding: 0;
+  }
+  .check:hover {
+    background: rgba(0, 0, 0, .1);
+    border-radius: 5px;
+  }
+  .check input {
+    width: 100%;
+    height: 20px;
+    margin: .2rem 0;
+    cursor: pointer;
+  }
+
+  .task-attribute{
+    display: flex;
+    padding: .3rem;
+    justify-content: space-between;
+  }
