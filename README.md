@@ -6,7 +6,9 @@ Una aplicación de React para gestionar tareas y personajes con funcionalidades 
 ## Tecnologías Utilizadas
 - React: Biblioteca de JavaScript para construir interfaces de usuario.
 - React Bootstrap: Framework de UI basado en Bootstrap para React.
-- Dexie: Biblioteca para el manejo de bases de datos indexadas en el navegador.
+- MongoDB: Biblioteca para el manejo de bases de datos indexadas.
+- Axios: Biblioteca para el manejo de solicitudes al backend.
+- Express: Biblioteca para el manejo de endpoints del API.
 <img src="https://i.ibb.co/LzhN9JC/Captura-de-pantalla-2023-09-22-185640.png">
 
 
