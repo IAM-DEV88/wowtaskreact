@@ -14,16 +14,16 @@ function App() {
     <>
         <AppProvider>
         <Tabs
-          defaultActiveKey="tabla"
-          id="uncontrolled-tab-example"
+          defaultActiveKey="character"
+          id="wowtask-tab"
         >
-          <Tab eventKey="personaje" title="Personajes">
+          <Tab eventKey="character" title="Characters">
             <CharList />
           </Tab>
-          <Tab eventKey="tarea" title="Tareas">
+          <Tab eventKey="task" title="Tasks">
             <TaskList />
           </Tab>
-          <Tab eventKey="tabla" title="Tabla">
+          <Tab eventKey="table" title="Table">
             <TaskTable />
           </Tab>
         </Tabs>

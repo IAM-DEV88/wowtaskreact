@@ -1,8 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import db from "./Database";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import axios from "axios";
 
 const AppContext = createContext();
 
@@ -23,48 +29,65 @@ export const AppProvider = ({ children }) => {
   const [activeTask, setActiveTask] = useState(null);
 
   useEffect(() => {
-    db.character.toArray().then((data) => {
-      if (data.length === 0) {
-        db.character.bulkAdd([]).then(() => {
+    axios
+      .get("/api/character")
+      .then((response) => {
+        const data = response.data; // Obtiene los datos de la respuesta
+        if (data.length === 0) {
+          // Si no hay datos, realiza alguna acción, como establecer charList en un array vacío.
           setCharList([]);
-        });
-      } else {
-        setCharList(data);
-      }
-    });
+        } else {
+          // Si hay datos, establece charList con los datos obtenidos.
+          setCharList(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        // Maneja cualquier error que ocurra durante la solicitud.
+      });
 
-    db.task.toArray().then((data) => {
-      if (data.length === 0) {
-        db.task.bulkAdd([]).then(() => {
+    axios
+      .get("/api/task")
+      .then((response) => {
+        const data = response.data; // Obtiene los datos de la respuesta
+        if (data.length === 0) {
+          // Si no hay datos, realiza alguna acción, como establecer charList en un array vacío.
           setTaskList([]);
-        });
-      } else {
-        setTaskList(data);
-      }
-    });
+        } else {
+          // Si hay datos, establece charList con los datos obtenidos.
+          setTaskList(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        // Maneja cualquier error que ocurra durante la solicitud.
+      });
   }, []);
 
   const capitalizeFirstLetter = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
-  const toggleModal = useCallback((mode, data, key, value) => {
-    setShowModal(!showModal);
-    setModalMode(mode);
-    switch (mode) {
-      case "task":
-        setSelectedTask(data);
-        break;
-      case "char":
-        setSelectedChar(data);
-        break;
-      default:
-        break;
-    }
+  const toggleModal = useCallback(
+    (mode, data, key, value) => {
+      setShowModal(!showModal);
+      setModalMode(mode);
+      switch (mode) {
+        case "task":
+          setSelectedTask(data);
+          break;
+        case "char":
+          setSelectedChar(data);
+          break;
+        default:
+          break;
+      }
 
-    setEditedAttr(key);
-    setEditedValue(value);
-  }, [showModal]);
+      setEditedAttr(key);
+      setEditedValue(value);
+    },
+    [showModal]
+  );
 
   const closeModal = () => {
     setShowModal(false);
@@ -78,15 +101,15 @@ export const AppProvider = ({ children }) => {
     setShowNotification(true);
   };
 
-  const handleTaskCheck = (charId, taskId) => {
-    const character = charList.find((character) => character.id === charId);
-  
+  const handleTaskCheck = async (charId, taskId) => {
+    const character = charList.find((character) => character._id === charId);
+
     if (!character) {
       console.error("Character not found");
       return;
     }
 
-    const updatedDone = [...character.done];
+    const updatedDone = [...character.completed];
     const taskIndex = updatedDone.indexOf(taskId);
 
     if (taskIndex !== -1) {
@@ -95,27 +118,26 @@ export const AppProvider = ({ children }) => {
       updatedDone.push(taskId);
     }
 
-    db.character
-      .where("id")
-      .equals(charId)
-      .modify({ done: updatedDone })
-      .then(() => {
-        const updatedCharList = charList.map((char) =>
-          char.id === charId ? { ...char, done: updatedDone } : char
-        );
-        setCharList(updatedCharList);
-      })
-      .catch((error) => {
-        console.error("Error updating task status", error);
-      });
+    try {
+      const response = await axios.post(
+        `/api/character/${charId}`,
+        updatedDone
+      );
+
+      if (response.data.message === "Character updated") {
+        loadCharacterList();
+      }
+    } catch (error) {
+      console.error("Error en la solicitud de actualización:", error);
+    }
   };
 
   useEffect(() => {
     if (selectedChar) {
-      setActiveChar(selectedChar.id);
+      setActiveChar(selectedChar._id);
     }
     if (selectedTask) {
-      setActiveTask(selectedTask.id);
+      setActiveTask(selectedTask._id);
     }
   }, [selectedChar, selectedTask]);
 
@@ -124,9 +146,10 @@ export const AppProvider = ({ children }) => {
       const enabledTasksCounts = charList.map((character) => {
         const enabledTasksCount = taskList.reduce((count, task) => {
           if (
-            (task.profession === "all" || task.profession === character.primary) &&
+            (task.profession === "all" ||
+              task.profession === character.primary) &&
             parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-             !task.exclude.includes(character.id)
+            !task.exclude.includes(character._id)
           ) {
             count++;
           }
@@ -134,55 +157,109 @@ export const AppProvider = ({ children }) => {
         }, 0);
         return enabledTasksCount;
       });
-  
+
       // Use reduce to calculate the sum of all enabledTasksCount values
       const sumOfEnabledTasksCounts = enabledTasksCounts.reduce(
         (sum, count) => sum + count,
         0
       );
-  
+
       return sumOfEnabledTasksCounts;
     };
-  
+
     const countCompletedTasksForCharacter = (characterId) => {
-      const character = charList.find((char) => char.id === characterId);
+      const character = charList.find((char) => char._id === characterId);
       if (!character) return 0;
-  
-      return character.done.length;
+
+      return character.completed.length;
     };
-  
+
     const countCompletedTasksForAllCharacters = () => {
       const totalCompletedTasks = charList.reduce((total, character) => {
-        const completedTasksCount = countCompletedTasksForCharacter(character.id);
+        const completedTasksCount = countCompletedTasksForCharacter(
+          character._id
+        );
         return total + completedTasksCount;
       }, 0);
-  
+
       return totalCompletedTasks;
     };
-  
+
     const enabledTasksCounts = countEnabledTasksForCharacters();
     const markedTasksCount = countCompletedTasksForAllCharacters();
-  
+
     setPendingTasks(enabledTasksCounts - markedTasksCount);
     setMarkedTasks(markedTasksCount);
   }, [charList, taskList]);
+
+  const loadCharacterList = async () => {
+    try {
+      const response = await axios.get("/api/character");
+      const data = response.data;
   
+      if (data.length === 0) {
+        setCharList([]);
+      } else {
+        setCharList(data);
+      }
+  
+      return data; // Devuelve los datos cargados
+    } catch (error) {
+      showCustomNotification("Error:", error);
+      throw error; // Lanza el error para que se maneje en el lugar donde se llama a loadCharacterList si es necesario.
+    }
+  };
+  
+
+  const loadTaskList = async () => {
+    try {
+      const response = await axios.get("/api/task");
+      const data = response.data;
+  
+      if (data.length === 0) {
+        setTaskList([]);
+      } else {
+        setTaskList(data);
+      }
+  
+      return data; // Devuelve los datos cargados
+    } catch (error) {
+      showCustomNotification("Error:", error);
+      throw error; // Lanza el error para que se maneje en el lugar donde se llama a loadCharacterList si es necesario.
+    }
+  };
+
   const sharedState = {
-    db,
-    charList, setCharList,
-    activeChar, setActiveChar,
-    activeTask, setActiveTask,
-    selectedChar, setSelectedChar,
-    selectedTask, setSelectedTask,
+    loadCharacterList,
+    loadTaskList,
+    charList,
+    setCharList,
+    activeChar,
+    setActiveChar,
+    activeTask,
+    setActiveTask,
+    selectedChar,
+    setSelectedChar,
+    selectedTask,
+    setSelectedTask,
     capitalizeFirstLetter,
-    toggleModal, showModal, modalMode, closeModal,
-    editedAttr, setEditedAttr,
-    editedValue, setEditedValue,
-    showNotification, setShowNotification,
-    customMessage, setCustomMessage,
+    toggleModal,
+    showModal,
+    modalMode,
+    closeModal,
+    editedAttr,
+    setEditedAttr,
+    editedValue,
+    setEditedValue,
+    showNotification,
+    setShowNotification,
+    customMessage,
+    setCustomMessage,
     showCustomNotification,
-    taskList, setTaskList,
-    pendingTasks, setPendingTasks,
+    taskList,
+    setTaskList,
+    pendingTasks,
+    setPendingTasks,
     markedTasks,
     handleTaskCheck,
     AddCircleOutlineIcon,

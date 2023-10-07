@@ -4,16 +4,16 @@ import { useRef, useEffect } from "react";
 import { useAppContext } from "./AppProvider";
 import { toast, ToastContainer } from "react-toastify";
 import AppButton from "./AppButton";
+import axios from "axios";
 
 const AttrModal = () => {
   const {
-    db,
-    setCharList,
+    loadCharacterList,
+    loadTaskList,
     setSelectedChar,
     selectedChar,
     selectedTask,
     setSelectedTask,
-    setTaskList,
     showModal,
     modalMode,
     closeModal,
@@ -21,6 +21,7 @@ const AttrModal = () => {
     editedValue,
     setEditedValue,
     showNotification,
+    showCustomNotification,
     customMessage,
     setCustomMessage,
     setShowNotification,
@@ -50,56 +51,47 @@ const AttrModal = () => {
     }
   }, [setShowNotification, showNotification, setCustomMessage, customMessage]);
 
-  
-  const updateCharHandler = (e) => {
-    e.preventDefault();
-    const isConfirmed = window.confirm(
-      "¿Update character?"
-    );
-
+  const updateCharHandler = async (e) => {
+    const isConfirmed = window.confirm("¿Update character?");
     if (isConfirmed) {
-      db.character
-        .where("id")
-        .equals(selectedChar.id)
-        .modify((character) => {
-          character[editedAttr] = editedValue;
-        })
-        .then(() => {
-          setCharList((prevList) =>
-            prevList.map((character) =>
-              character.id === selectedChar.id
-                ? { ...character, [editedAttr]: editedValue }
-                : character
-            )
-          );
-        });
+      const updatedData = {
+        [editedAttr]: editedValue,
+      };
+      try {
+        const response = await axios.post(
+          `/api/character/${selectedChar._id}`,
+          updatedData
+        );
+        if (response.status === 200) {
+          loadCharacterList();
+        }
+        showCustomNotification(response.data.message);
+      } catch (error) {
+        console.error("Error:", error);
+      }
     }
     closeModal();
     setSelectedChar(selectedChar);
   };
 
-  const updateTaskHandler = (e) => {
-    e.preventDefault();
-    const isConfirmed = window.confirm(
-      "¿Update task?"
-    );
-
+  const updateTaskHandler = async (e) => {
+    const isConfirmed = window.confirm("¿Update task?");
     if (isConfirmed) {
-      db.task
-        .where("id")
-        .equals(selectedTask.id)
-        .modify((task) => {
-          task[editedAttr] = editedValue;
-        })
-        .then(() => {
-          setTaskList((prevList) =>
-            prevList.map((task) =>
-              task.id === selectedTask.id
-                ? { ...task, [editedAttr]: editedValue }
-                : task
-            )
-          );
-        });
+      const updatedData = {
+        [editedAttr]: editedValue,
+      };
+      try {
+        const response = await axios.post(
+          `/api/task/${selectedTask._id}`,
+          updatedData
+        );
+        if (response.status === 201) {
+          loadTaskList();
+        }
+        showCustomNotification(response.data.message);
+      } catch (error) {
+        console.error("Error:", error);
+      }
     }
     closeModal();
     setSelectedTask(selectedTask);
@@ -115,7 +107,6 @@ const AttrModal = () => {
     }
   };
 
-
   return (
     <>
       <Modal size="sm" show={showModal} onHide={closeModal}>
@@ -127,7 +118,11 @@ const AttrModal = () => {
             <input
               ref={inputRef}
               className="attrInput"
-              type={editedAttr === "gearscore" || editedAttr === "level" ? "number" : "text"} // Define el tipo de input según el atributo
+              type={
+                editedAttr === "gearscore" || editedAttr === "level"
+                  ? "number"
+                  : "text"
+              } // Define el tipo de input según el atributo
               value={editedValue} // Establece el valor del input
               onChange={(e) => setEditedValue(e.target.value)} // Maneja los cambios en el valor
             />

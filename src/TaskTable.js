@@ -1,8 +1,10 @@
 import { useAppContext } from "./AppProvider";
+import axios from "axios";
 
 function TaskTable() {
   const {
-    db,
+    loadCharacterList,
+    showCustomNotification,
     charList,
     setCharList,
     taskList,
@@ -25,83 +27,65 @@ function TaskTable() {
     (a, b) => a.gearscore - b.gearscore
   );
 
-  const handleCharacterCheck = (characterId) => {
-    const character = charList.find((char) => char.id === characterId);
-
-    if (!character) {
-      console.error("Character not found");
-      return;
-    }
-
-    const updatedDone = character.done.slice(); // Create a copy of the character's done array
-
-    // Recorrer taskList y marcar o desmarcar tareas según el criterio
-    taskList.forEach((task) => {
-      if (
-        (task.profession === "all" || task.profession === character.primary) &&
-                          parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-        !task.exclude.includes(character.id)
-      ) {
-        const taskIndex = updatedDone.indexOf(task.id);
-
-        if (taskIndex !== -1) {
-          // Si ya está marcada, la desmarcamos
-          updatedDone.splice(taskIndex, 1);
-        } else {
-          // Si no está marcada, la marcamos
-          updatedDone.push(task.id);
+  const handleCharacterCheck = async (characterId) => {
+    try {
+      const character = charList.find((char) => char._id === characterId);
+      const updatedDone = [...character.completed]; // Create a copy of the character's completed array
+      for (const task of taskList) {
+        if (
+          (task.profession === "all" || task.profession === character.primary) &&
+          parseInt(task.gearscore) <= parseInt(character.gearscore) &&
+          !task.exclude.includes(character._id)
+        ) {
+          const taskIndex = updatedDone.indexOf(task._id);
+          if (taskIndex !== -1) {
+            // Si ya está marcada, la desmarcamos
+            updatedDone.splice(taskIndex, 1);
+          } else {
+            // Si no está marcada, la marcamos
+            updatedDone.push(task._id);
+          }
         }
       }
-    });
-
-    db.character
-      .where("id")
-      .equals(characterId)
-      .modify({ done: updatedDone })
-      .then(() => {
-        const updatedCharList = charList.map((char) =>
-          char.id === characterId ? { ...char, done: updatedDone } : char
-        );
+      const response = await axios.post(`/api/character/${character._id}`, updatedDone);
+      if (response.status === 200) {
+        const updatedCharList = await loadCharacterList();
         setCharList(updatedCharList);
-      })
-      .catch((error) => {
-        console.error("Error updating task status", error);
-      });
+      }
+      showCustomNotification(response.data.message);
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   const handleTaskCheckAllCharacters = (taskId) => {
-    const task = taskList.find((task) => task.id === taskId);
-
-    charList.forEach((character) => {
+    const task = taskList.find((task) => task._id === taskId);
+    charList.forEach(async (character) => {
       if (
         (task.profession === "all" || task.profession === character.primary) &&
-                          parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-        !task.exclude.includes(character.id)
+        parseInt(task.gearscore) <= parseInt(character.gearscore) &&
+        !task.exclude.includes(character._id)
       ) {
-        if (character.done.includes(taskId)) {
-          const taskIndex = character.done.indexOf(taskId);
+        if (character.completed.includes(taskId)) {
+          const taskIndex = character.completed.indexOf(taskId);
           if (taskIndex !== -1) {
-            character.done.splice(taskIndex, 1);
+            character.completed.splice(taskIndex, 1);
           }
         } else {
-          character.done.push(taskId);
+          character.completed.push(taskId);
         }
-
-        db.character
-          .where("id")
-          .equals(character.id)
-          .modify({ done: character.done })
-          .then(() => {
-            const updatedCharList = charList.map((char) =>
-              char.id === character.id
-                ? { ...char, done: character.done }
-                : char
-            );
+        const updatedDone = character.completed;
+        try {
+          const response = await axios.post(`/api/character/${character._id}`, updatedDone);
+  
+          if (response.status === 200) {
+            const updatedCharList = await loadCharacterList();
             setCharList(updatedCharList);
-          })
-          .catch((error) => {
-            console.error("Error updating task status", error);
-          });
+          }
+          showCustomNotification(response.data.message);
+        } catch (error) {
+          console.error("Error:", error);
+        }
       }
     });
   };
@@ -111,12 +95,12 @@ function TaskTable() {
   const eligibleCharacters = sortedCharList.filter((character) => (
     (task.profession === "all" || task.profession === character.primary) &&
     parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-    !task.exclude.includes(character.id)
+    !task.exclude.includes(character._id)
   ));
 
   // Verificar si la tarea está marcada en todos los personajes elegibles
   const taskIsMarkedInAllCharacters = eligibleCharacters.every((character) => (
-    character.done.includes(task.id)
+    character.completed.includes(task._id)
   ));
 
   return taskIsMarkedInAllCharacters;
@@ -126,11 +110,11 @@ function TaskTable() {
     const eligibleTasks = sortedTaskList.filter((task) => (
       (task.profession === "all" || task.profession === character.primary) &&
       parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-      !task.exclude.includes(character.id)
+      !task.exclude.includes(character._id)
     ));
   
     const allTasksMarked = eligibleTasks.every((task) => (
-      character.done.includes(task.id)
+      character.completed.includes(task._id)
     ));
   
     return allTasksMarked;
@@ -142,19 +126,19 @@ function TaskTable() {
         <thead>
           <tr>
             <th>
-              Tarea
-              <div>Pendientes: {pendingTasks}</div>
-              <div>Marcadas: {markedTasks}</div>
+              Task
+              <div>Pending: {pendingTasks}</div>
+              <div>Completed: {markedTasks}</div>
             </th>
             {sortedCharList.map((character) => (
-              <th className="char-cell" key={character.id}>
+              <th className="char-cell" key={character._id}>
                 <input
                   type="checkbox"
-                  id={"char-cell" + character.id}
+                  id={"char-cell" + character._id}
                   checked={isCharFullfilled(character)}
-                  onChange={() => handleCharacterCheck(character.id)}
+                  onChange={() => handleCharacterCheck(character._id)}
                 />
-                <label htmlFor={"char-cell" + character.id}>
+                <label htmlFor={"char-cell" + character._id}>
                   {character.name}
                 </label>
                 <div
@@ -182,27 +166,27 @@ function TaskTable() {
         </thead>
         <tbody>
           {sortedTaskList.map((task) => (
-            <tr key={task.id}>
+            <tr key={task._id}>
               <td className="task-cell">
                 <input
                   type="checkbox"
-                  id={"task-cell" + task.id}
+                  id={"task-cell" + task._id}
                   checked={isTaskFullfilled(task)}
-                  onChange={() => handleTaskCheckAllCharacters(task.id)}
+                  onChange={() => handleTaskCheckAllCharacters(task._id)}
                 />
-                <label htmlFor={"task-cell" + task.id}>{task.task}</label>
+                <label htmlFor={"task-cell" + task._id}>{task.task}</label>
               </td>
               {sortedCharList.map((character) => (
-                <td className="check" key={character.id}>
+                <td className="check" key={character._id}>
                   {(task.profession === "all" ||
                     task.profession === character.primary) &&
                   parseInt(task.gearscore) <= parseInt(character.gearscore) &&
-                  !task.exclude.includes(character.id) ? (
+                  !task.exclude.includes(character._id) ? (
                     <input
                       type="checkbox"
-                      checked={character.done.includes(task.id)}
+                      checked={character.completed.includes(task._id)}
                       onChange={() => {
-                        handleTaskCheck(character.id, task.id);
+                        handleTaskCheck(character._id, task._id);
                       }}
                     />
                   ) : null}

@@ -1,13 +1,13 @@
 import { useAppContext } from "./AppProvider";
 import Accordion from "react-bootstrap/Accordion";
 import AppButton from "./AppButton";
+import axios from "axios";
 
 function TaskList() {
   const {
-    db,
     charList,
-    setCharList,
     taskList,
+    loadTaskList,
     setTaskList,
     selectedTask,
     setSelectedTask,
@@ -27,108 +27,94 @@ function TaskList() {
   );
 
   const handleTaskSelectChange = (e) => {
-    const selectedId = parseInt(e.target.value, 10);
+    const selectedId = e.target.value;
     if (selectedId === 0) {
       setSelectedTask(null);
     } else {
-      const selected = sortedTaskList.find((task) => task.id === selectedId);
+      const selected = sortedTaskList.find((task) => task._id === selectedId);
       setSelectedTask(selected);
     }
   };
 
-  const handleNewTask = () => {
-    const template = {
-      task: "Task",
-      gearscore: 0,
-      profession: "all",
-      exclude: [],
-    };
-
-    db.task
-      .add(template)
-      .then((id) => {
-        setTaskList((prevList) => [...prevList, { id, ...template }]);
-        setActiveTask({ id, ...template });
-        setSelectedTask({ id, ...template });
-        showCustomNotification("New task created");
-      })
-      .catch((error) => {
-        showCustomNotification("Error: " + error);
-      });
+  const handleNewTask = async () => {
+    try {
+      const response = await axios.post(`/api/newtask`);
+      if (response.status === 201) {
+        const updatedTaskList = await loadTaskList();
+        const newTask = response.data.newTask;
+        const foundTask = updatedTaskList.find((task) => task._id === newTask);
+        setSelectedTask(foundTask);
+        setActiveTask(foundTask);
+      }
+      showCustomNotification(response.data.message);
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
-  const handleDeleteTask = (id) => {
+  const handleDeleteTask = async (taskId) => {
     const isConfirmed = window.confirm("¿Delete task?");
-
     if (isConfirmed) {
-      db.task
-        .where("id")
-        .equals(id)
-        .delete()
-        .then(() => {
-          setTaskList((prevList) => prevList.filter((item) => item.id !== id));
-        });
-
-      showCustomNotification("Task deleted");
+      try {
+        const response = await axios.delete(`/api/deletetask/${taskId}`);
+        if (response.status === 201) {
+          const updatedTaskList = await loadTaskList();
+          setTaskList(updatedTaskList);
+          setSelectedTask(null);
+          setActiveTask(null);
+        }
+        showCustomNotification(response.data.message);
+      } catch (error) {
+        console.error("Error:", error);
+      }
     }
   };
 
   const resetTaskTable = async () => {
     const isConfirmed = window.confirm("¿Delete all tasks?");
-
     if (isConfirmed) {
       try {
-        await db.table("task").clear();
-
-        showCustomNotification("Task list cleared");
-
-        const newData = await db.task.toArray();
-        setCharList(newData);
+        const response = await axios.delete("/api/deletetasks");
+        if (response.status === 201) {
+          const updatedTaskList = await loadTaskList();
+          setTaskList(updatedTaskList);
+        }
+        showCustomNotification(response.data.message);
       } catch (error) {
-        showCustomNotification("Error clearing list", error);
+        console.error("Error:", error);
       }
     }
   };
 
-  const handleExcludeToggle = (character, task) => {
-    // Clonar el arreglo de exclude para evitar mutar el estado directamente
+  const handleExcludeToggle = async (character, task) => {
     const updatedExclude = [...task.exclude];
-    const characterIndex = updatedExclude.indexOf(character.id);
-
+    const characterIndex = updatedExclude.indexOf(character._id);
     if (characterIndex === -1) {
-      // Si characterId no está en updatedExclude, agrégalo
-      updatedExclude.push(character.id);
+      updatedExclude.push(character._id);
       showCustomNotification(
         character.name + " is now excluded to do " + task.task
       );
     } else {
-      // Si characterId ya está en updatedExclude, quítalo
       updatedExclude.splice(characterIndex, 1);
       showCustomNotification(
         character.name + " is now included to do " + task.task
       );
     }
-
     const updatedSelectedTask = { ...selectedTask, exclude: updatedExclude };
-
-    // Actualiza la base de datos usando Dexie
-    db.task
-      .where("id")
-      .equals(selectedTask.id)
-      .modify({ exclude: updatedExclude })
-      .then(() => {
-        // Actualiza taskList después de la modificación
-        const updatedTaskList = taskList.map((task) =>
-          task.id === selectedTask.id
-            ? { ...task, exclude: updatedExclude }
-            : task
-        );
+    try {
+      const response = await axios.post(
+        `/api/task/${selectedTask._id}`,
+        updatedExclude
+      );
+      if (response.status === 201) {
+        const updatedTaskList = await loadTaskList();
         setTaskList(updatedTaskList);
         setSelectedTask(updatedSelectedTask);
-      })
-      .catch((error) => {
-        showCustomNotification("Error: " + error);
-      });
+      }
+      showCustomNotification(response.data.message);
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   return (
@@ -138,7 +124,7 @@ function TaskList() {
           <option value={0}>Lista de tareas</option>
           {sortedTaskList.length > 0 ? (
             sortedTaskList.map((task) => (
-              <option key={task.id} value={task.id}>
+              <option key={task._id} value={task._id}>
                 {task.task}
                 {task.gearscore > 0 && ", Min gearscore: " + task.gearscore}
                 {task.profession !== "all" && ", Requires " + task.profession}
@@ -169,12 +155,12 @@ function TaskList() {
       {selectedTask && (
         <Accordion className="task-list" activeKey={activeTask}>
           {taskList.map((task) => {
-            if (task.id === selectedTask.id) {
+            if (task._id === selectedTask._id) {
               return (
                 <Accordion.Item
-                  key={task.id}
+                  key={task._id}
                   className="task-card"
-                  eventKey={task.id}
+                  eventKey={task._id}
                 >
                   <Accordion.Header>
                     {task.task}
@@ -186,7 +172,7 @@ function TaskList() {
                     <div className="task-item">
                       <div className="task-info">
                         {Object.entries(task)
-                          .filter(([key]) => key !== "id" && key !== "exclude")
+                          .filter(([key]) => key !== "_id" && key !== "exclude")
                           .map(([key, value]) => (
                             <div
                               key={key}
@@ -213,13 +199,13 @@ function TaskList() {
 
                             if (isEligible) {
                               return (
-                                <div key={character.id}>
+                                <div key={character._id}>
                                   <input
                                     type="checkbox"
-                                    id={`exclude-checkbox-${character.id}`}
-                                    name={`exclude-checkbox-${character.id}`}
+                                    id={`exclude-checkbox-${character._id}`}
+                                    name={`exclude-checkbox-${character._id}`}
                                     checked={selectedTask.exclude.includes(
-                                      character.id
+                                      character._id
                                     )}
                                     onChange={() =>
                                       handleExcludeToggle(
@@ -229,7 +215,7 @@ function TaskList() {
                                     }
                                   />
                                   <label
-                                    htmlFor={`exclude-checkbox-${character.id}`}
+                                    htmlFor={`exclude-checkbox-${character._id}`}
                                   >
                                     {character.name}
                                   </label>
@@ -246,7 +232,7 @@ function TaskList() {
                       variant="danger"
                       type="button"
                       label="Delete character"
-                      onClick={() => handleDeleteTask(task.id)}
+                      onClick={() => handleDeleteTask(task._id)}
                       icono={RemoveCircleOutlineIcon}
                     />
                   </Accordion.Body>
